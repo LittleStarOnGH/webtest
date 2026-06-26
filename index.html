@@ -3,23 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> UEA "Hologram" Project </title>
+    <title>3-Way Hologram & Digital Twin Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/svcl.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/aruco.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body class="bg-black text-white font-sans overflow-hidden m-0 h-screen w-screen selection:bg-transparent">
 
     <div id="mode-selection" class="absolute inset-0 z-50 flex flex-col justify-center items-center bg-slate-950 p-6 text-center">
+        
+        <div class="mb-4">
+            <p class="text-xs text-indigo-400 font-mono tracking-widest uppercase">School of Computing Sciences</p>
+        </div>
+
         <h1 class="text-2xl font-bold mb-2 text-indigo-400">📐 3-Way & Digital Twin</h1>
         <p class="text-xs text-slate-400 mb-8 max-w-xs">ระบบฉายแสง 3 ด้านสมมาตร ควบคุมผ่าน Touchpad หรือกล้องสแกนวัตถุจริง</p>
-        <p class="text-xs text-indigo-400 font-mono tracking-widest"> SCHOOL OF EMP </p>
-        <img src="uea-logo.png" alt="University Logo" class="h-16 mx-auto mb-2 opacity-90">
+        
         <div class="flex flex-col gap-4 w-full max-w-xs">
             <button onclick="initPeer('screen')" class="bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-bold shadow-lg transition-all active:scale-95 text-sm">
-                📺 เปิดเป็นหน้าจอแสดงผล (สำหรับ iPad)
+                📺 เปิดเป็นหน้าจอแสดงผล (สำหรับ iPad / Laptop)
             </button>
             <div class="relative flex py-2 items-center w-full">
                 <div class="flex-grow border-t border-slate-800"></div>
@@ -30,12 +35,19 @@
                 📱 เปิดเป็นรีโมตควบคุม (สำหรับมือถือ)
             </button>
         </div>
+
+        <div class="mt-8 p-4 bg-slate-900 border border-slate-800 rounded-xl text-left max-w-xs">
+            <h4 class="text-xs font-bold text-indigo-400 mb-1">📝 ข้อมูลระบบเบื้องหลัง:</h4>
+            <p class="text-[10px] text-slate-400 leading-relaxed">
+                ขับเคลื่อนพิกัดด้วยสมองกล Python และส่งผ่านข้อมูลไร้สายความเร็วสูงด้วยเทคโนโลยี WebRTC เพื่อสร้างแบบจำลองฝาแฝดดิจิทัล (Digital Twin)
+            </p>
+        </div>
     </div>
 
     <div id="controller-setup" class="hidden absolute inset-0 z-50 flex flex-col justify-center items-center bg-slate-950 p-6 text-center">
         <h2 class="text-xl font-bold mb-2 text-indigo-400">🔗 เชื่อมต่อรีโมตออนไลน์</h2>
         <div class="w-full max-w-xs">
-            <input id="join-id-input" type="text" pattern="[0-9]*" inputmode="numeric" placeholder="กรอกรหัสห้อง 4 หลักจาก iPad" class="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-center text-white font-mono text-lg mb-4 focus:outline-none focus:border-indigo-500">
+            <input id="join-id-input" type="text" pattern="[0-9]*" inputmode="numeric" placeholder="กรอกรหัสห้อง 4 หลักจากหน้าจอหลัก" class="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-center text-white font-mono text-lg mb-4 focus:outline-none focus:border-indigo-500">
             <button onclick="connectToScreen()" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition-all active:scale-95 text-sm">
                 🚀 เชื่อมต่อระบบออนไลน์
             </button>
@@ -46,6 +58,7 @@
         <div id="room-id-box" class="absolute top-4 left-4 z-10 bg-slate-900/90 p-4 rounded-xl border border-slate-800 text-left">
             <p class="text-[10px] text-slate-400">รหัสห้องออนไลน์ 3 ด้านของคุณ:</p>
             <h3 id="display-peer-id" class="text-2xl font-mono font-bold text-emerald-400">กำลังสร้าง...</h3>
+            <p id="screen-python-status" class="text-[9px] text-amber-500 mt-1 font-semibold">🔌 Python backend: ยังไม่ได้เชื่อมต่อ</p>
         </div>
         <div id="guide-lines" class="absolute inset-0 pointer-events-none">
             <div class="absolute inset-0 flex justify-center"><div class="w-[1px] h-full bg-indigo-500/25"></div></div>
@@ -59,6 +72,7 @@
             <div class="text-center">
                 <h2 class="text-sm font-bold text-indigo-400">🎛️ Premium Hybrid Control</h2>
                 <p class="text-[10px] text-emerald-400">เชื่อมต่อเข้ากับแท่นโฮโลแกรมเรียบร้อย</p>
+                <p id="ctrl-python-status" class="text-[9px] text-amber-500 mt-0.5 font-semibold">🔌 Python สมองกล: ยังไม่ได้เชื่อมต่อ</p>
             </div>
 
             <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
@@ -89,16 +103,12 @@
                     <button onclick="sendAction('shape', 'torus')" class="bg-slate-800 py-1 rounded-md text-[10px]">วงแหวน</button>
                     <button onclick="sendAction('shape', 'crystal')" class="bg-slate-800 py-1 rounded-md text-[10px]">คริสตัล</button>
                     <button onclick="sendAction('shape', 'cone')" class="bg-slate-800 py-1 rounded-md text-[10px]">ทรงกรวย</button>
-                    <button onclick="sendAction('shape', 'custom_artifact')" class="bg-emerald-600 py-1 rounded-md text-[10px] font-bold">⚙️ เฟือง 3D</button>
+                    <button onclick="sendAction('shape', 'custom_artifact')" class="bg-emerald-600 py-1 rounded-md text-[10px] font-bold">⚙️ โมเดล 3D</button>
                 </div>
-                <div class="grid grid-cols-7 gap-1 pt-1 justify-items-center">
-                    <button onclick="sendAction('color', '#ffd700')" class="w-5 h-5 rounded-full bg-[#ffd700] border border-white/10"></button>
-                    <button onclick="sendAction('color', '#00ffcc')" class="w-5 h-5 rounded-full bg-[#00ffcc] border border-white/10"></button>
-                    <button onclick="sendAction('color', '#ff007f')" class="w-5 h-5 rounded-full bg-[#ff007f] border border-white/10"></button>
-                    <button onclick="sendAction('color', '#39ff14')" class="w-5 h-5 rounded-full bg-[#39ff14] border border-white/10"></button>
-                    <button onclick="sendAction('color', '#ff00ff')" class="w-5 h-5 rounded-full bg-[#ff00ff] border border-white/10"></button>
-                    <button onclick="sendAction('color', '#ff5722')" class="w-5 h-5 rounded-full bg-[#ff5722] border border-white/10"></button>
-                    <button onclick="sendAction('color', '#ffffff')" class="w-5 h-5 rounded-full bg-[#ffffff] border border-white/10"></button>
+                
+                <div class="mt-2 text-center">
+                    <label class="block text-[10px] text-slate-400 mb-1">🎨 จิ้มเพื่อเลือกสีตามใจชอบ</label>
+                    <input type="color" id="custom-color-picker" value="#00ffcc" oninput="sendAction('color', this.value)" class="w-full h-10 cursor-pointer bg-slate-800 rounded-md border border-slate-700">
                 </div>
             </div>
 
@@ -131,6 +141,7 @@
         let currentMode = 'touch';
         let videoElement, canvasElement, canvasCtx, detector;
         let animationFrameId;
+        let pythonSocket; 
 
         const viewAngles = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
 
@@ -150,6 +161,8 @@
                 peer = new Peer(roomCode, { debug: 2 });
                 peer.on('open', id => document.getElementById('display-peer-id').innerText = id.replace("uea-twin-", ""));
                 peer.on('connection', connection => { conn = connection; setupReceiver(); });
+                
+                connectToPythonBackend();
             }
         }
 
@@ -165,6 +178,8 @@
                     document.getElementById('controller-view').classList.remove('hidden');
                     setupTouchpad();
                     initTrackingSystem(); 
+                    
+                    connectToPythonBackend();
                 });
             });
         }
@@ -174,10 +189,11 @@
         function setupReceiver() {
             conn.on('data', data => {
                 if (data.type === 'shape') {
-                    const currentColor = currentMeshes[0] && currentMeshes[0].material.color ? currentMeshes[0].material.color.getHexString() : "ffd700";
+                    // ดึงสีปัจจุบันจาก Color Picker มาใช้กับวัตถุใหม่
+                    const currentColor = document.getElementById('custom-color-picker') ? document.getElementById('custom-color-picker').value : "#00ffcc";
                     recreateAllGeometries(data.value, currentColor);
                 } else if (data.type === 'color') {
-                    currentMeshes.forEach(mesh => { if(mesh.material.color) mesh.material.color.set(data.value); });
+                    currentMeshes.forEach(mesh => { if(mesh.material && mesh.material.color) mesh.material.color.set(data.value); });
                 } else if (data.type === 'scale') {
                     baseScale = data.value / 100;
                     currentMeshes.forEach(mesh => mesh.scale.set(baseScale, baseScale, baseScale));
@@ -189,17 +205,64 @@
                         mesh.rotation.x += data.value.deltaY * 0.012;
                     });
                 } else if (data.type === 'twin_rotate') {
-                    currentMeshes.forEach((mesh, idx) => {
-                        mesh.rotation.y = viewAngles[idx] + data.value.y;
-                        mesh.rotation.x = data.value.x;
-                        mesh.rotation.z = data.value.z;
-                    });
+                    applyTwinRotation(data.value);
                 } else if (data.type === 'toggleUI') {
                     document.getElementById('room-id-box').classList.toggle('hidden');
                 } else if (data.type === 'toggleGuides') {
                     document.getElementById('guide-lines').classList.toggle('hidden');
                 }
             });
+        }
+
+        function applyTwinRotation(value) {
+            currentMeshes.forEach((mesh, idx) => {
+                mesh.rotation.y = viewAngles[idx] + value.y;
+                mesh.rotation.x = value.x;
+                mesh.rotation.z = value.z;
+            });
+        }
+
+        function connectToPythonBackend() {
+            console.log("⚡ กำลังเชื่อมต่อเข้าหาเครื่องยนต์ Python Backend...");
+            pythonSocket = new WebSocket('ws://127.0.0.1:8080');
+
+            pythonSocket.onopen = () => {
+                console.log("✅ ซิงก์สมองกล Python สำเร็จ!");
+                updatePythonStatusUI(true);
+            };
+
+            pythonSocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'twin_rotate') {
+                    if (myRole === 'screen') {
+                        applyTwinRotation(data.value);
+                    } else if (myRole === 'controller') {
+                        sendAction('twin_rotate', data.value);
+                    }
+                }
+            };
+
+            pythonSocket.onclose = () => {
+                console.log("❌ ท่อสัญญาณ Python ปิดอยู่");
+                updatePythonStatusUI(false);
+                setTimeout(connectToPythonBackend, 4000);
+            };
+
+            pythonSocket.onerror = (err) => {
+                console.error("Python WebSocket Error: ", err);
+                updatePythonStatusUI(false);
+            };
+        }
+
+        function updatePythonStatusUI(isConnected) {
+            const screenStatus = document.getElementById('screen-python-status');
+            const ctrlStatus = document.getElementById('ctrl-python-status');
+            
+            const msg = isConnected ? "🟢 Python backend: เชื่อมต่อสำเร็จแล้ว" : "🔴 Python backend: ตัดการเชื่อมต่อ";
+            const colorClass = isConnected ? "text-emerald-400" : "text-red-500";
+
+            if (screenStatus) { screenStatus.innerText = msg; screenStatus.className = `text-[9px] ${colorClass} mt-1 font-semibold`; }
+            if (ctrlStatus) { ctrlStatus.innerText = msg; ctrlStatus.className = `text-[9px] ${colorClass} mt-0.5 font-semibold`; }
         }
 
         function switchControlMode(mode) {
@@ -224,7 +287,6 @@
             }
         }
 
-        // --- ระบบกล้องที่แก้ไขเรื่องความละเอียดแล้ว ---
         function initTrackingSystem() {
             videoElement = document.getElementById('webcam-video');
             canvasElement = document.getElementById('tracker-canvas');
@@ -234,7 +296,6 @@
 
         function startCameraStream() {
             const constraints = { video: { facingMode: { ideal: "environment" } } };
-            
             navigator.mediaDevices.getUserMedia(constraints)
                 .then(stream => {
                     videoElement.srcObject = stream;
@@ -264,7 +325,6 @@
                 canvasElement.width = videoElement.videoWidth;
                 canvasElement.height = videoElement.videoHeight;
                 canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-                
                 const imageData = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
                 const markers = detector.detect(imageData);
                 
@@ -292,7 +352,6 @@
             if (currentMode === 'twin') animationFrameId = requestAnimationFrame(processWebcamFrame);
         }
 
-        // --- ระบบ 3D ---
         function init3DMultiView() {
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -305,39 +364,68 @@
                 scene.background = null;
                 const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
                 camera.position.z = 6;
-                scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                
+                // 💡 ปรับเพิ่มความสว่างตรงนี้! ให้สีสดขึ้นและสะท้อนดีขึ้น
+                scene.add(new THREE.AmbientLight(0xffffff, 1.2)); // เพิ่มแสงสว่างรอบทิศทาง
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); // เพิ่มแสงไฟส่องตรง
                 dirLight.position.set(3, 5, 4);
                 scene.add(dirLight);
+                
                 scenes.push(scene);
                 cameras.push(camera);
             }
-            recreateAllGeometries('torus', 'ffd700');
+            recreateAllGeometries('torus', '#00ffcc');
             animate();
         }
 
         function recreateAllGeometries(type, colorHex) {
             for (let i = 0; i < 3; i++) { if (currentMeshes[i]) scenes[i].remove(currentMeshes[i]); }
             currentMeshes = [];
-            let geometry;
-            if (type === 'custom_artifact') geometry = new THREE.TorusGeometry(0.7, 0.35, 12, 18);
-            else if (type === 'torus') geometry = new THREE.TorusKnotGeometry(0.8, 0.28, 100, 16);
-            else if (type === 'crystal') geometry = new THREE.IcosahedronGeometry(1.1, 0);
-            else if (type === 'cone') geometry = new THREE.ConeGeometry(0.9, 1.8, 32);
 
-            const material = new THREE.MeshStandardMaterial({
-                color: new THREE.Color("#" + colorHex),
-                metalness: 0.9, roughness: 0.15,
-                flatShading: type === 'custom_artifact' || type === 'crystal'
-            });
+            if (type === 'custom_artifact') {
+                const loader = new THREE.GLTFLoader();
+                
+                // ⚠️ อย่าลืมอัปโหลดไฟล์ Sohn_DoorLock_100463952.gltf ขึ้น GitHub
+                loader.load('Sohn_DoorLock_100463952.gltf', function (gltf) {
+                    for (let i = 0; i < 3; i++) {
+                        const modelClone = gltf.scene.clone(); 
+                        modelClone.rotation.y = viewAngles[i];
+                        modelClone.scale.set(baseScale, baseScale, baseScale);
+                        
+                        modelClone.traverse((child) => {
+                            if (child.isMesh && child.material) {
+                                child.material.color.set(colorHex);
+                            }
+                        });
 
-            for (let i = 0; i < 3; i++) {
-                const mesh = new THREE.Mesh(geometry, material.clone());
-                mesh.rotation.y = viewAngles[i];
-                if (type === 'custom_artifact') mesh.rotation.x = 0.5;
-                mesh.scale.set(baseScale, baseScale, baseScale);
-                scenes[i].add(mesh);
-                currentMeshes.push(mesh);
+                        scenes[i].add(modelClone);
+                        currentMeshes.push(modelClone);
+                    }
+                }, undefined, function (error) {
+                    console.error('ไม่สามารถดึงไฟล์โมเดลขึ้นมาแสดงผลได้:', error);
+                });
+
+            } else {
+                let geometry;
+                if (type === 'torus') geometry = new THREE.TorusKnotGeometry(0.8, 0.28, 100, 16);
+                else if (type === 'crystal') geometry = new THREE.IcosahedronGeometry(1.1, 0);
+                else if (type === 'cone') geometry = new THREE.ConeGeometry(0.9, 1.8, 32);
+
+                // 💡 ลดความด้านและความเป็นโลหะลง เพื่อให้สีสดใสเด้งขึ้นมา
+                const material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(colorHex),
+                    metalness: 0.3,   // ลดค่าความสะท้อนแสงดำๆ ออก (เดิม 0.9)
+                    roughness: 0.3,   // ทำให้สีกระจายตัวนุ่มนวลขึ้น
+                    flatShading: type === 'crystal'
+                });
+
+                for (let i = 0; i < 3; i++) {
+                    const mesh = new THREE.Mesh(geometry, material.clone());
+                    mesh.rotation.y = viewAngles[i];
+                    mesh.scale.set(baseScale, baseScale, baseScale);
+                    scenes[i].add(mesh);
+                    currentMeshes.push(mesh);
+                }
             }
         }
 
@@ -357,30 +445,4 @@
             for (let i = 0; i < 3; i++) {
                 const vp = viewports[i];
                 renderer.setScissor(vp.x, vp.y, size, size);
-                renderer.setViewport(vp.x, vp.y, size, size);
-                if (currentMode === 'touch' && currentMeshes[i]) currentMeshes[i].rotation.y += 0.003;
-                renderer.render(scenes[i], cameras[i]);
-            }
-        }
-
-        // --- ระบบ Touchpad ที่แก้ไข ID แล้ว ---
-        function setupTouchpad() {
-            const pad = document.getElementById('area-touch-mode');
-            if (!pad) return;
-
-            let isDrawing = false, lastX = 0, lastY = 0;
-            pad.addEventListener('touchstart', e => {
-                if(currentMode !== 'touch') return;
-                isDrawing = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-            });
-            pad.addEventListener('touchmove', e => {
-                if (!isDrawing || currentMode !== 'touch') return;
-                const x = e.touches[0].clientX, y = e.touches[0].clientY;
-                sendAction('rotate', { deltaX: x - lastX, deltaY: y - lastY });
-                lastX = x; lastY = y;
-            });
-            pad.addEventListener('touchend', () => isDrawing = false);
-        }
-    </script>
-</body>
-</html>
+                renderer.setViewport(vp.x
