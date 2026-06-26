@@ -386,17 +386,23 @@
                 const loader = new THREE.GLTFLoader();
                 
                 loader.load('Sohn_DoorLock_100463952.gltf', function (gltf) {
-                    for (let i = 0; i < 3; i++) {
-                        const modelClone = gltf.scene.clone(); // แยกร่างวัตถุเป็น 3 ด้าน
+                   for (let i = 0; i < 3; i++) {
+                        const modelClone = gltf.scene.clone(); 
                         modelClone.rotation.y = viewAngles[i];
-                        modelClone.scale.set(baseScale, baseScale, baseScale);
                         
-                        // ซิงก์ระบบเปลี่ยนสีวัตถุตามแถบคำสั่งรีโมต
-                        modelClone.traverse((child) => {
-                            if (child.isMesh && child.material) {
-                                child.material.color.set("#" + colorHex);
-                            }
-                        });
+                        // 🌟 จัดจุดกึ่งกลางโมเดล
+                        const box = new THREE.Box3().setFromObject(modelClone);
+                        const center = box.getCenter(new THREE.Vector3());
+                        modelClone.position.x += (modelClone.position.x - center.x);
+                        modelClone.position.y += (modelClone.position.y - center.y);
+                        modelClone.position.z += (modelClone.position.z - center.z);
+
+                        // 🔍 [จุดแก้ที่ 1]: ลดขนาดลงตรงนี้! โค้ชใส่ตัวคูณ * 0.1 เอาไว้ให้ (จะทำให้ขนาดเล็กลง 10 เท่าทันที)
+                        // หากยังใหญ่ไป สามารถเปลี่ยนจาก 0.1 เป็น 0.05 หรือ 0.02 ได้ตามใจชอบเลยครับ
+                        modelClone.scale.set(baseScale * 0.1, baseScale * 0.1, baseScale * 0.1);
+                        
+                        // แปะป้ายบอกระบบว่าเป็นโมเดลพิเศษ
+                        modelClone.userData = { isCustom: true };
 
                         scenes[i].add(modelClone);
                         currentMeshes.push(modelClone);
